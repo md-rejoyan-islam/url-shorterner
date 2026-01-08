@@ -57,31 +57,23 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
-    # environment:
-    #   - NODE_ENV=production
-    #   - MONGO_URI=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-password}@mongodb:27017/${MONGO_DB:-url_shortener}?authSource=admin
-    #   - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379
     expose:
       - "5080"
-    # depends_on:
-    # mongodb:
-    #   condition: service_healthy
-    # redis:
-    #   condition: service_healthy
     networks:
       - traefik-proxy
-    # labels:
-    #   - "traefik.enable=true"
-    #   # HTTPS Router
-    #   - "traefik.http.routers.url-shortener-backend.rule=Host(`url.rejoyan.me`)"
-    #   - "traefik.http.routers.url-shortener-backend.entrypoints=websecure"
-    #   - "traefik.http.routers.url-shortener-backend.tls=true"
-    #   - "traefik.http.routers.url-shortener-backend.tls.certresolver=letsencrypt"
-    #   - "traefik.http.services.url-shortener-backend.loadbalancer.server.port=5080"
-    #   # HTTP Router (redirect to HTTPS)
-    #   - "traefik.http.routers.url-shortener-backend-http.rule=Host(`url.rejoyan.me`)"
-    #   - "traefik.http.routers.url-shortener-backend-http.entrypoints=web"
-    #   - "traefik.http.routers.url-shortener-backend-http.middlewares=https-redirect"
+    labels:
+      - "traefik.enable=true"
+      # HTTPS Router - Route /api/* and short URL redirects to backend
+      - "traefik.http.routers.url-shortener-backend.rule=Host(`url.rejoyan.me`) && (PathPrefix(`/api`) || PathPrefix(`/health`))"
+      - "traefik.http.routers.url-shortener-backend.entrypoints=websecure"
+      - "traefik.http.routers.url-shortener-backend.tls=true"
+      - "traefik.http.routers.url-shortener-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.url-shortener-backend.priority=100"
+      - "traefik.http.services.url-shortener-backend.loadbalancer.server.port=5080"
+      # HTTP Router (redirect to HTTPS)
+      - "traefik.http.routers.url-shortener-backend-http.rule=Host(`url.rejoyan.me`) && (PathPrefix(`/api`) || PathPrefix(`/health`))"
+      - "traefik.http.routers.url-shortener-backend-http.entrypoints=web"
+      - "traefik.http.routers.url-shortener-backend-http.middlewares=https-redirect"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:5080/health"]
       interval: 30s
