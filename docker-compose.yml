@@ -61,32 +61,6 @@ services:
       - "5080"
     networks:
       - traefik-proxy
-    labels:
-      - "traefik.enable=true"
-      # HTTPS Router - Route /api/* and /health to backend
-      - "traefik.http.routers.url-shortener-backend.rule=Host(`url.rejoyan.me`) && (PathPrefix(`/api`) || PathPrefix(`/health`))"
-      - "traefik.http.routers.url-shortener-backend.entrypoints=websecure"
-      - "traefik.http.routers.url-shortener-backend.tls=true"
-      - "traefik.http.routers.url-shortener-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.url-shortener-backend.priority=100"
-      - "traefik.http.services.url-shortener-backend.loadbalancer.server.port=5080"
-      # HTTP Router for /api and /health (redirect to HTTPS)
-      - "traefik.http.routers.url-shortener-backend-http.rule=Host(`url.rejoyan.me`) && (PathPrefix(`/api`) || PathPrefix(`/health`))"
-      - "traefik.http.routers.url-shortener-backend-http.entrypoints=web"
-      - "traefik.http.routers.url-shortener-backend-http.middlewares=https-redirect"
-      # HTTPS Router for short URLs /r/* - strip prefix and forward to backend
-      - "traefik.http.routers.url-shortener-redirect.rule=Host(`url.rejoyan.me`) && PathPrefix(`/r`)"
-      - "traefik.http.routers.url-shortener-redirect.entrypoints=websecure"
-      - "traefik.http.routers.url-shortener-redirect.tls=true"
-      - "traefik.http.routers.url-shortener-redirect.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.url-shortener-redirect.priority=100"
-      - "traefik.http.routers.url-shortener-redirect.service=url-shortener-backend"
-      - "traefik.http.middlewares.strip-r-prefix.stripprefix.prefixes=/r"
-      - "traefik.http.routers.url-shortener-redirect.middlewares=strip-r-prefix"
-      # HTTP Router for /r/* (redirect to HTTPS)
-      - "traefik.http.routers.url-shortener-redirect-http.rule=Host(`url.rejoyan.me`) && PathPrefix(`/r`)"
-      - "traefik.http.routers.url-shortener-redirect-http.entrypoints=web"
-      - "traefik.http.routers.url-shortener-redirect-http.middlewares=https-redirect"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:5080/health"]
       interval: 30s
