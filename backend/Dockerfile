@@ -34,7 +34,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 
 # Copy docs folder for swagger
-COPY --from=builder /app/src/docs ./src/docs
+COPY --from=builder /app/docs ./docs
 
 EXPOSE 5080
 
