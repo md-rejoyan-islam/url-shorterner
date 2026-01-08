@@ -56,6 +56,21 @@ url-shortener/
 
 ---
 
+## 🌐 Live Demo
+
+**Live URL:** [https://url.rejoyan.me](https://url.rejoyan.me)
+
+### Test Credentials
+
+| Role | Email | Password |
+|:-----|:------|:---------|
+| Admin | `rejoyanislam22@gmail.com` | `aA123456` |
+| User | `rejoyanislam0014@gmail.com` | `aA123456` |
+
+> **Note:** These are demo accounts for testing purposes. Please do not change the passwords.
+
+---
+
 ## ✨ Features
 
 <table>
