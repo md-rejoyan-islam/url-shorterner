@@ -1,0 +1,3405 @@
+openapi: 3.1.0
+info:
+  title: URL Shortener API
+  description: |
+    A comprehensive API for URL shortening with analytics, user management, subscriptions, and payment processing.
+
+    ## Authentication
+    Most endpoints require authentication via JWT Bearer token or HTTP-only cookies.
+    - **Access Token**: Short-lived token for API authentication
+    - **Refresh Token**: Long-lived token for obtaining new access tokens
+
+    ## Rate Limiting
+    API requests may be rate limited based on your subscription plan.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:5080/api/v1
+    description: Development server
+  - url: https://api.example.com/api/v1
+    description: Production server
+
+tags:
+  - name: Auth
+    description: Authentication and user account management
+  - name: URLs
+    description: URL shortening and management
+  - name: Analytics
+    description: Click analytics and statistics
+  - name: Plans
+    description: Subscription plan management
+  - name: Subscriptions
+    description: User subscription management
+  - name: Payments
+    description: Payment processing and card management
+  - name: Users
+    description: User management (Admin only)
+  - name: Redirect
+    description: URL redirection
+
+paths:
+  # ==================== AUTH ROUTES ====================
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      description: Create a new user account. A verification email will be sent to the provided email address.
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login a user
+      description: Authenticate user and receive access and refresh tokens. Tokens are also set as HTTP-only cookies.
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Successfully logged in
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: HTTP-only cookies containing access and refresh tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh-token:
+    post:
+      tags:
+        - Auth
+      summary: Refresh access token
+      description: Get a new access token using a refresh token from request body or cookies.
+      operationId: refreshToken
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "200":
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify-email:
+    post:
+      tags:
+        - Auth
+      summary: Verify email address
+      description: Verify user email using the token sent via email.
+      operationId: verifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailRequest"
+      responses:
+        "200":
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/resend-verification:
+    post:
+      tags:
+        - Auth
+      summary: Resend verification email
+      description: Resend the email verification link to the user's email address.
+      operationId: resendVerificationEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendVerificationRequest"
+      responses:
+        "200":
+          description: Verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Auth
+      summary: Request password reset
+      description: Send a password reset link to the user's email address.
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Password reset link sent to email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Auth
+      summary: Reset password
+      description: Reset user password using the token received via email.
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Get current user
+      description: Get the currently authenticated user's profile information.
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      tags:
+        - Auth
+      summary: Update current user
+      description: Update the currently authenticated user's profile information.
+      operationId: updateCurrentUser
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeRequest"
+      responses:
+        "200":
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags:
+        - Auth
+      summary: Delete current user account
+      description: Permanently delete the authenticated user's account.
+      operationId: deleteCurrentUser
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Account deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/me/usage:
+    get:
+      tags:
+        - Auth
+      summary: Get current user usage
+      description: Get usage statistics for the current user including URL counts and click counts.
+      operationId: getCurrentUserUsage
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Usage data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/me/avatar:
+    post:
+      tags:
+        - Auth
+      summary: Upload avatar
+      description: Upload a new avatar image for the current user.
+      operationId: uploadAvatar
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Avatar image file (JPEG, PNG, GIF)
+              required:
+                - avatar
+      responses:
+        "200":
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Avatar uploaded successfully
+                  data:
+                    type: object
+                    properties:
+                      avatarUrl:
+                        type: string
+                        format: uri
+                        example: https://example.com/avatars/user123.jpg
+        "400":
+          description: Invalid file type or size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout user
+      description: Invalidate the current session. Refresh token can be provided in body or cookies.
+      operationId: logoutUser
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogoutRequest"
+      responses:
+        "200":
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/logout-all:
+    post:
+      tags:
+        - Auth
+      summary: Logout from all devices
+      description: Invalidate all sessions for the current user.
+      operationId: logoutAllDevices
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Successfully logged out from all devices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/change-password:
+    put:
+      tags:
+        - Auth
+      summary: Change password
+      description: Change the current user's password.
+      operationId: changePassword
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          description: Current password is incorrect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/devices:
+    get:
+      tags:
+        - Auth
+      summary: Get logged in devices
+      description: Get a list of all devices where the user is currently logged in.
+      operationId: getDevices
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Devices list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevicesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/devices/{id}:
+    delete:
+      tags:
+        - Auth
+      summary: Logout from specific device
+      description: Invalidate a specific device session by its ID.
+      operationId: logoutDevice
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DeviceId"
+      responses:
+        "200":
+          description: Device logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ==================== URL ROUTES ====================
+  /urls:
+    get:
+      tags:
+        - URLs
+      summary: Get user's URLs
+      description: Get all shortened URLs for the authenticated user with pagination and filtering.
+      operationId: getMyUrls
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: search
+          in: query
+          description: Search term for URL or alias
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          description: Filter by active status
+          schema:
+            type: string
+            enum: ["true", "false"]
+        - name: sortBy
+          in: query
+          description: Field to sort by
+          schema:
+            type: string
+            enum: [createdAt, clicks, originalUrl]
+        - name: sortOrder
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        "200":
+          description: URLs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags:
+        - URLs
+      summary: Create short URL
+      description: Create a new shortened URL.
+      operationId: createUrl
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUrlRequest"
+      responses:
+        "201":
+          description: URL created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Custom alias already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /urls/summary:
+    get:
+      tags:
+        - URLs
+      summary: Get URL summary
+      description: Get summary statistics for user's URLs.
+      operationId: getMyUrlSummary
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlSummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /urls/{id}:
+    get:
+      tags:
+        - URLs
+      summary: Get URL by ID
+      description: Get details of a specific shortened URL.
+      operationId: getUrlById
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UrlId"
+      responses:
+        "200":
+          description: URL retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags:
+        - URLs
+      summary: Update URL
+      description: Update a shortened URL's settings.
+      operationId: updateUrl
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UrlId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUrlRequest"
+      responses:
+        "200":
+          description: URL updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags:
+        - URLs
+      summary: Delete URL
+      description: Delete a shortened URL.
+      operationId: deleteUrl
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UrlId"
+      responses:
+        "200":
+          description: URL deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /urls/admin/all:
+    get:
+      tags:
+        - URLs
+      summary: Get all URLs (Admin)
+      description: Get all URLs in the system. Admin only.
+      operationId: getAllUrls
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: search
+          in: query
+          description: Search term
+          schema:
+            type: string
+        - name: userId
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          description: Filter by active status
+          schema:
+            type: string
+            enum: ["true", "false"]
+      responses:
+        "200":
+          description: URLs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /urls/admin/{id}:
+    get:
+      tags:
+        - URLs
+      summary: Get URL by ID (Admin)
+      description: Get any URL by ID. Admin only.
+      operationId: adminGetUrlById
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UrlId"
+      responses:
+        "200":
+          description: URL retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags:
+        - URLs
+      summary: Delete URL (Admin)
+      description: Delete any URL by ID. Admin only.
+      operationId: adminDeleteUrl
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UrlId"
+      responses:
+        "200":
+          description: URL deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== ANALYTICS/CLICKS ROUTES ====================
+  /clicks/analytics:
+    get:
+      tags:
+        - Analytics
+      summary: Get user analytics
+      description: Get overall analytics for all user's URLs.
+      operationId: getMyAnalytics
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: urlId
+          in: query
+          description: Filter analytics by specific URL ID
+          schema:
+            type: string
+        - name: days
+          in: query
+          description: Number of days to include in analytics
+          schema:
+            type: integer
+            minimum: 1
+            default: 30
+      responses:
+        "200":
+          description: Analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /clicks/analytics/{urlId}:
+    get:
+      tags:
+        - Analytics
+      summary: Get URL analytics
+      description: Get detailed analytics for a specific URL.
+      operationId: getUrlAnalytics
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: urlId
+          in: path
+          required: true
+          description: URL ID
+          schema:
+            type: string
+        - name: days
+          in: query
+          description: Number of days to include in analytics
+          schema:
+            type: integer
+            minimum: 1
+            default: 30
+      responses:
+        "200":
+          description: URL analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlAnalyticsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /clicks/url/{urlId}:
+    get:
+      tags:
+        - Analytics
+      summary: Get URL clicks
+      description: Get paginated list of clicks for a specific URL.
+      operationId: getUrlClicks
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: urlId
+          in: path
+          required: true
+          description: URL ID
+          schema:
+            type: string
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: startDate
+          in: query
+          description: Filter clicks from this date (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          description: Filter clicks until this date (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Clicks retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClicksListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== PLANS ROUTES ====================
+  /plans:
+    get:
+      tags:
+        - Plans
+      summary: Get all plans
+      description: Get all available subscription plans.
+      operationId: getAllPlans
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: type
+          in: query
+          description: Filter by plan type
+          schema:
+            type: string
+            enum: [free, basic, pro, enterprise]
+        - name: isActive
+          in: query
+          description: Filter by active status
+          schema:
+            type: string
+            enum: ["true", "false"]
+      responses:
+        "200":
+          description: Plans retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanListResponse"
+    post:
+      tags:
+        - Plans
+      summary: Create plan (Admin)
+      description: Create a new subscription plan. Admin only.
+      operationId: createPlan
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlanRequest"
+      responses:
+        "201":
+          description: Plan created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /plans/default:
+    get:
+      tags:
+        - Plans
+      summary: Get default plan
+      description: Get the default (free) plan.
+      operationId: getDefaultPlan
+      responses:
+        "200":
+          description: Default plan retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanResponse"
+
+  /plans/slug/{slug}:
+    get:
+      tags:
+        - Plans
+      summary: Get plan by slug
+      description: Get a plan by its URL-friendly slug.
+      operationId: getPlanBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: Plan slug
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Plan retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /plans/admin:
+    get:
+      tags:
+        - Plans
+      summary: Get all plans (Admin)
+      description: Get all plans including inactive ones. Admin only.
+      operationId: getAllPlansAdmin
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: type
+          in: query
+          description: Filter by plan type
+          schema:
+            type: string
+            enum: [free, basic, pro, enterprise]
+        - name: isActive
+          in: query
+          description: Filter by active status
+          schema:
+            type: string
+            enum: ["true", "false"]
+      responses:
+        "200":
+          description: Plans retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /plans/seed:
+    post:
+      tags:
+        - Plans
+      summary: Seed plans (Admin)
+      description: Seed default subscription plans. Admin only.
+      operationId: seedPlans
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Plans seeded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /plans/{id}:
+    get:
+      tags:
+        - Plans
+      summary: Get plan by ID (Admin)
+      description: Get a plan by its ID. Admin only.
+      operationId: getPlanById
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "200":
+          description: Plan retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags:
+        - Plans
+      summary: Update plan (Admin)
+      description: Update a subscription plan. Admin only.
+      operationId: updatePlan
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlanRequest"
+      responses:
+        "200":
+          description: Plan updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags:
+        - Plans
+      summary: Delete plan (Admin)
+      description: Delete a subscription plan. Admin only.
+      operationId: deletePlan
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "200":
+          description: Plan deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== SUBSCRIPTION ROUTES ====================
+  /subscriptions/me:
+    get:
+      tags:
+        - Subscriptions
+      summary: Get my subscription
+      description: Get the current user's active subscription.
+      operationId: getMySubscription
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Subscription retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /subscriptions/me/history:
+    get:
+      tags:
+        - Subscriptions
+      summary: Get subscription history
+      description: Get the current user's subscription history.
+      operationId: getMySubscriptionHistory
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Subscription history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionHistoryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /subscriptions:
+    post:
+      tags:
+        - Subscriptions
+      summary: Subscribe to a plan
+      description: Create a new subscription for the current user.
+      operationId: subscribe
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubscriptionRequest"
+      responses:
+        "201":
+          description: Subscription created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /subscriptions/cancel:
+    post:
+      tags:
+        - Subscriptions
+      summary: Cancel subscription
+      description: Cancel the current user's subscription.
+      operationId: cancelSubscription
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Subscription cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No active subscription found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /subscriptions/change-plan:
+    post:
+      tags:
+        - Subscriptions
+      summary: Change subscription plan
+      description: Change the current user's subscription to a different plan.
+      operationId: changePlan
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubscriptionRequest"
+      responses:
+        "200":
+          description: Plan changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /subscriptions/admin:
+    get:
+      tags:
+        - Subscriptions
+      summary: Get all subscriptions (Admin)
+      description: Get all subscriptions in the system. Admin only.
+      operationId: getAllSubscriptions
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: status
+          in: query
+          description: Filter by subscription status
+          schema:
+            type: string
+            enum: [active, cancelled, expired, pending, past_due]
+        - name: userId
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+        - name: planId
+          in: query
+          description: Filter by plan ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Subscriptions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /subscriptions/{id}:
+    get:
+      tags:
+        - Subscriptions
+      summary: Get subscription by ID (Admin)
+      description: Get a subscription by its ID. Admin only.
+      operationId: getSubscriptionById
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      responses:
+        "200":
+          description: Subscription retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags:
+        - Subscriptions
+      summary: Update subscription (Admin)
+      description: Update a subscription. Admin only.
+      operationId: updateSubscription
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSubscriptionRequest"
+      responses:
+        "200":
+          description: Subscription updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /subscriptions/expire-check:
+    post:
+      tags:
+        - Subscriptions
+      summary: Check expired subscriptions (Admin)
+      description: Run a check for expired subscriptions and update their status. Admin only.
+      operationId: expireSubscriptions
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Expiration check completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ==================== PAYMENT ROUTES ====================
+  /payments/config:
+    get:
+      tags:
+        - Payments
+      summary: Get Stripe config
+      description: Get Stripe publishable key for client-side integration.
+      operationId: getStripeConfig
+      responses:
+        "200":
+          description: Stripe config retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      publishableKey:
+                        type: string
+                        example: pk_test_...
+
+  /payments/checkout:
+    post:
+      tags:
+        - Payments
+      summary: Create checkout session
+      description: Create a Stripe checkout session for subscription payment.
+      operationId: createCheckoutSession
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutRequest"
+      responses:
+        "200":
+          description: Checkout session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /payments/confirm:
+    post:
+      tags:
+        - Payments
+      summary: Confirm payment
+      description: Confirm a payment intent after successful payment.
+      operationId: confirmPayment
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmPaymentRequest"
+      responses:
+        "200":
+          description: Payment confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /payments/confirm-session:
+    post:
+      tags:
+        - Payments
+      summary: Confirm checkout session
+      description: Confirm a Stripe hosted checkout session after redirect.
+      operationId: confirmCheckoutSession
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmSessionRequest"
+      responses:
+        "200":
+          description: Session confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /payments/cards:
+    get:
+      tags:
+        - Payments
+      summary: Get saved cards
+      description: Get all saved payment cards for the current user.
+      operationId: getSavedCards
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Cards retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedCardsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags:
+        - Payments
+      summary: Add card
+      description: Add a new payment card to the user's account.
+      operationId: addCard
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCardRequest"
+      responses:
+        "201":
+          description: Card added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedCardResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /payments/cards/setup-intent:
+    post:
+      tags:
+        - Payments
+      summary: Create setup intent
+      description: Create a Stripe setup intent for adding a new card.
+      operationId: createSetupIntent
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Setup intent created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      clientSecret:
+                        type: string
+                        example: seti_...
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /payments/cards/{paymentMethodId}:
+    delete:
+      tags:
+        - Payments
+      summary: Remove card
+      description: Remove a saved payment card.
+      operationId: removeCard
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaymentMethodId"
+      responses:
+        "200":
+          description: Card removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /payments/cards/{paymentMethodId}/default:
+    patch:
+      tags:
+        - Payments
+      summary: Set default card
+      description: Set a saved card as the default payment method.
+      operationId: setDefaultCard
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaymentMethodId"
+      responses:
+        "200":
+          description: Default card updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /payments/history:
+    get:
+      tags:
+        - Payments
+      summary: Get payment history
+      description: Get the current user's payment history.
+      operationId: getPaymentHistory
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Payment history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /payments/{id}:
+    get:
+      tags:
+        - Payments
+      summary: Get payment by ID
+      description: Get details of a specific payment.
+      operationId: getPaymentById
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Payment retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /payments/admin/all:
+    get:
+      tags:
+        - Payments
+      summary: Get all payments (Admin)
+      description: Get all payments in the system. Admin only.
+      operationId: adminGetAllPayments
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: status
+          in: query
+          description: Filter by payment status
+          schema:
+            type: string
+            enum: [pending, succeeded, failed, refunded, cancelled]
+        - name: userId
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payments retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /payments/admin/{id}:
+    get:
+      tags:
+        - Payments
+      summary: Get payment by ID (Admin)
+      description: Get any payment by ID. Admin only.
+      operationId: adminGetPaymentById
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Payment retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /payments/admin/{id}/refund:
+    post:
+      tags:
+        - Payments
+      summary: Refund payment (Admin)
+      description: Refund a payment. Admin only.
+      operationId: adminRefundPayment
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PaymentId"
+      responses:
+        "200":
+          description: Payment refunded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== USER ROUTES (ADMIN) ====================
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Get all users (Admin)
+      description: Get all users with pagination and filtering. Admin only.
+      operationId: getAllUsers
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: search
+          in: query
+          description: Search by name or email
+          schema:
+            type: string
+            maxLength: 100
+        - name: role
+          in: query
+          description: Filter by user role
+          schema:
+            type: string
+            enum: [admin, user]
+        - name: isActive
+          in: query
+          description: Filter by active status
+          schema:
+            type: string
+            enum: ["true", "false"]
+      responses:
+        "200":
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags:
+        - Users
+      summary: Create user (Admin)
+      description: Create a new user. Admin only.
+      operationId: createUser
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID (Admin)
+      description: Get a user by their ID. Admin only.
+      operationId: getUserById
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags:
+        - Users
+      summary: Update user (Admin)
+      description: Update a user's information. Admin only.
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags:
+        - Users
+      summary: Delete user (Admin)
+      description: Delete a user. Admin only.
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ==================== REDIRECT ROUTE ====================
+  /{shortId}:
+    get:
+      tags:
+        - Redirect
+      summary: Redirect to original URL
+      description: Redirects to the original URL and records click analytics.
+      operationId: handleRedirect
+      parameters:
+        - name: shortId
+          in: path
+          required: true
+          description: The short URL identifier
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirects to the original URL
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: The original URL to redirect to
+        "404":
+          description: Short URL not found or inactive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "410":
+          description: Short URL has expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  # ==================== SECURITY SCHEMES ====================
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: accessToken
+      description: HTTP-only cookie containing JWT access token
+
+  # ==================== PARAMETERS ====================
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Page number for pagination
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    UrlId:
+      name: id
+      in: path
+      required: true
+      description: URL ID
+      schema:
+        type: string
+    UserId:
+      name: id
+      in: path
+      required: true
+      description: User ID
+      schema:
+        type: string
+    PlanId:
+      name: id
+      in: path
+      required: true
+      description: Plan ID
+      schema:
+        type: string
+    SubscriptionId:
+      name: id
+      in: path
+      required: true
+      description: Subscription ID
+      schema:
+        type: string
+    PaymentId:
+      name: id
+      in: path
+      required: true
+      description: Payment ID
+      schema:
+        type: string
+    PaymentMethodId:
+      name: paymentMethodId
+      in: path
+      required: true
+      description: Stripe payment method ID
+      schema:
+        type: string
+    DeviceId:
+      name: id
+      in: path
+      required: true
+      description: Device/session ID
+      schema:
+        type: string
+
+  # ==================== RESPONSES ====================
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            message: Authentication required
+            statusCode: 401
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            message: Access denied. Admin privileges required.
+            statusCode: 403
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            message: Resource not found
+            statusCode: 404
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorResponse"
+
+  # ==================== SCHEMAS ====================
+  schemas:
+    # Common Response Schemas
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation completed successfully
+      required:
+        - success
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: An error occurred
+        statusCode:
+          type: integer
+          example: 400
+      required:
+        - success
+        - message
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Validation failed
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: email
+              message:
+                type: string
+                example: Invalid email format
+      required:
+        - success
+        - message
+        - errors
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 100
+        totalPages:
+          type: integer
+          example: 10
+        hasNextPage:
+          type: boolean
+          example: true
+        hasPrevPage:
+          type: boolean
+          example: false
+
+    # Auth Schemas
+    RegisterRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[a-zA-Z\\s]+$"
+          example: John
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[a-zA-Z\\s]+$"
+          example: Doe
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        password:
+          type: string
+          minLength: 6
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)"
+          example: Password123
+          description: Must contain at least one uppercase, one lowercase, and one number
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        password:
+          type: string
+          minLength: 1
+          example: Password123
+      required:
+        - email
+        - password
+
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          description: Refresh token (optional if using cookies)
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    VerifyEmailRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+          example: verification-token-here
+      required:
+        - token
+
+    ResendVerificationRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+      required:
+        - email
+
+    ForgotPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+      required:
+        - email
+
+    ResetPasswordRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+          example: reset-token-here
+        password:
+          type: string
+          minLength: 6
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)"
+          example: NewPassword123
+      required:
+        - token
+        - password
+
+    UpdateMeRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[a-zA-Z\\s'-]+$"
+          example: John
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[a-zA-Z\\s'-]+$"
+          example: Doe
+        avatar:
+          type: string
+          nullable: true
+          example: https://example.com/avatar.jpg
+
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          description: Refresh token to invalidate (optional if using cookies)
+
+    ChangePasswordRequest:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+          example: OldPassword123
+        newPassword:
+          type: string
+          minLength: 6
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)"
+          example: NewPassword456
+      required:
+        - currentPassword
+        - newPassword
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Login successful
+        data:
+          type: object
+          properties:
+            user:
+              $ref: "#/components/schemas/User"
+            accessToken:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            refreshToken:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    # User Schemas
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: Doe
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        role:
+          type: string
+          enum: [admin, user]
+          example: user
+        avatar:
+          type: string
+          nullable: true
+          example: https://example.com/avatar.jpg
+        isActive:
+          type: boolean
+          example: true
+        isEmailVerified:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    UserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/User"
+
+    UserListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    CreateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[a-zA-Z\\s]+$"
+          example: John
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[a-zA-Z\\s]+$"
+          example: Doe
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        password:
+          type: string
+          minLength: 6
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)"
+          example: Password123
+        role:
+          type: string
+          enum: [admin, user]
+          example: user
+        isActive:
+          type: boolean
+          example: true
+        isEmailVerified:
+          type: boolean
+          example: false
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[a-zA-Z\\s]+$"
+          example: John
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[a-zA-Z\\s]+$"
+          example: Doe
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        role:
+          type: string
+          enum: [admin, user]
+          example: user
+        isActive:
+          type: boolean
+          example: true
+        isEmailVerified:
+          type: boolean
+          example: true
+        avatar:
+          type: string
+          nullable: true
+          example: https://example.com/avatar.jpg
+
+    UsageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            urlCount:
+              type: integer
+              example: 25
+            totalClicks:
+              type: integer
+              example: 1500
+            urlLimit:
+              type: integer
+              example: 100
+            clickLimit:
+              type: integer
+              example: 10000
+
+    DevicesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: session-id-123
+              device:
+                type: string
+                example: Chrome on Windows
+              ip:
+                type: string
+                example: 192.168.1.1
+              lastActive:
+                type: string
+                format: date-time
+                example: "2024-01-15T10:30:00Z"
+              isCurrent:
+                type: boolean
+                example: true
+
+    # URL Schemas
+    Url:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        originalUrl:
+          type: string
+          format: uri
+          example: https://example.com/very/long/url/path
+        shortId:
+          type: string
+          example: abc123
+        shortUrl:
+          type: string
+          format: uri
+          example: https://short.url/abc123
+        user:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        clickCount:
+          type: integer
+          example: 150
+        isActive:
+          type: boolean
+          example: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-12-31T23:59:59Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    CreateUrlRequest:
+      type: object
+      properties:
+        originalUrl:
+          type: string
+          format: uri
+          example: https://example.com/very/long/url/path
+        customAlias:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: "^[a-zA-Z0-9_-]+$"
+          example: my-custom-link
+          description: Optional custom alias (3-50 characters, alphanumeric, hyphens, underscores)
+        expiresAt:
+          type: string
+          format: date-time
+          example: "2024-12-31T23:59:59Z"
+          description: Optional expiration date
+      required:
+        - originalUrl
+
+    UpdateUrlRequest:
+      type: object
+      properties:
+        originalUrl:
+          type: string
+          format: uri
+          example: https://example.com/updated/url
+        isActive:
+          type: boolean
+          example: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-12-31T23:59:59Z"
+
+    UrlResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/Url"
+
+    UrlListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Url"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    UrlSummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            totalUrls:
+              type: integer
+              example: 50
+            activeUrls:
+              type: integer
+              example: 45
+            totalClicks:
+              type: integer
+              example: 5000
+            todayClicks:
+              type: integer
+              example: 120
+
+    # Click/Analytics Schemas
+    Click:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        url:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        ip:
+          type: string
+          example: 192.168.1.1
+        userAgent:
+          type: string
+          example: Mozilla/5.0 (Windows NT 10.0; Win64; x64)...
+        referer:
+          type: string
+          nullable: true
+          example: https://google.com
+        device:
+          type: object
+          properties:
+            type:
+              type: string
+              example: desktop
+            browser:
+              type: string
+              example: Chrome
+            os:
+              type: string
+              example: Windows
+        location:
+          type: object
+          properties:
+            country:
+              type: string
+              example: United States
+            city:
+              type: string
+              example: New York
+            region:
+              type: string
+              example: NY
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    ClicksListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Click"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    AnalyticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            totalClicks:
+              type: integer
+              example: 5000
+            uniqueVisitors:
+              type: integer
+              example: 3500
+            clicksByDay:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                    example: "2024-01-15"
+                  clicks:
+                    type: integer
+                    example: 150
+            topCountries:
+              type: array
+              items:
+                type: object
+                properties:
+                  country:
+                    type: string
+                    example: United States
+                  clicks:
+                    type: integer
+                    example: 2000
+            topDevices:
+              type: array
+              items:
+                type: object
+                properties:
+                  device:
+                    type: string
+                    example: desktop
+                  clicks:
+                    type: integer
+                    example: 3000
+            topBrowsers:
+              type: array
+              items:
+                type: object
+                properties:
+                  browser:
+                    type: string
+                    example: Chrome
+                  clicks:
+                    type: integer
+                    example: 2500
+
+    UrlAnalyticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            url:
+              $ref: "#/components/schemas/Url"
+            analytics:
+              type: object
+              properties:
+                totalClicks:
+                  type: integer
+                  example: 500
+                uniqueVisitors:
+                  type: integer
+                  example: 350
+                clicksByDay:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date:
+                        type: string
+                        format: date
+                        example: "2024-01-15"
+                      clicks:
+                        type: integer
+                        example: 25
+                topCountries:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      country:
+                        type: string
+                        example: United States
+                      clicks:
+                        type: integer
+                        example: 200
+                topDevices:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      device:
+                        type: string
+                        example: desktop
+                      clicks:
+                        type: integer
+                        example: 300
+                topBrowsers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      browser:
+                        type: string
+                        example: Chrome
+                      clicks:
+                        type: integer
+                        example: 250
+                topReferers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      referer:
+                        type: string
+                        example: https://google.com
+                      clicks:
+                        type: integer
+                        example: 100
+
+    # Plan Schemas
+    PlanFeatures:
+      type: object
+      properties:
+        urlLimit:
+          type: integer
+          description: "-1 for unlimited"
+          example: 100
+        customAliasAllowed:
+          type: boolean
+          example: true
+        analyticsEnabled:
+          type: boolean
+          example: true
+        qrCodeEnabled:
+          type: boolean
+          example: true
+        apiAccessEnabled:
+          type: boolean
+          example: false
+        maxDevices:
+          type: integer
+          example: 3
+        supportLevel:
+          type: string
+          enum: [basic, priority, dedicated]
+          example: basic
+
+    FeatureItem:
+      type: object
+      properties:
+        id:
+          type: string
+          example: feat-1
+        text:
+          type: string
+          example: Up to 100 short URLs
+        order:
+          type: integer
+          example: 1
+
+    Plan:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: Pro Plan
+        slug:
+          type: string
+          example: pro-plan
+        type:
+          type: string
+          enum: [free, basic, pro, enterprise]
+          example: pro
+        description:
+          type: string
+          example: Perfect for growing businesses
+        features:
+          $ref: "#/components/schemas/PlanFeatures"
+        featuresList:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureItem"
+        price:
+          oneOf:
+            - type: number
+              example: 29.99
+            - type: object
+              properties:
+                monthly:
+                  type: number
+                  example: 29.99
+                yearly:
+                  type: number
+                  example: 299.99
+        maxLinks:
+          type: integer
+          example: 500
+        maxClicks:
+          type: integer
+          example: 50000
+        interval:
+          type: string
+          enum: [month, year]
+          example: month
+        isActive:
+          type: boolean
+          example: true
+        isDefault:
+          type: boolean
+          example: false
+        sortOrder:
+          type: integer
+          example: 2
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    CreatePlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: Pro Plan
+        slug:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[a-z0-9-]+$"
+          example: pro-plan
+        type:
+          type: string
+          enum: [free, basic, pro, enterprise]
+          example: pro
+        description:
+          type: string
+          example: Perfect for growing businesses
+        features:
+          $ref: "#/components/schemas/PlanFeatures"
+        featuresList:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureItem"
+        price:
+          oneOf:
+            - type: number
+              minimum: 0
+              example: 29.99
+            - type: object
+              properties:
+                monthly:
+                  type: number
+                  minimum: 0
+                  example: 29.99
+                yearly:
+                  type: number
+                  minimum: 0
+                  example: 299.99
+        maxLinks:
+          type: integer
+          minimum: -1
+          example: 500
+        maxClicks:
+          type: integer
+          minimum: -1
+          example: 50000
+        interval:
+          type: string
+          enum: [month, year]
+          example: month
+        isActive:
+          type: boolean
+          example: true
+        isDefault:
+          type: boolean
+          example: false
+        sortOrder:
+          type: integer
+          example: 2
+      required:
+        - name
+        - price
+
+    UpdatePlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: Pro Plan Updated
+        slug:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: "^[a-z0-9-]+$"
+          example: pro-plan
+        type:
+          type: string
+          enum: [free, basic, pro, enterprise]
+          example: pro
+        description:
+          type: string
+          example: Updated description
+        features:
+          $ref: "#/components/schemas/PlanFeatures"
+        featuresList:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureItem"
+        price:
+          oneOf:
+            - type: number
+              minimum: 0
+              example: 39.99
+            - type: object
+              properties:
+                monthly:
+                  type: number
+                  minimum: 0
+                  example: 39.99
+                yearly:
+                  type: number
+                  minimum: 0
+                  example: 399.99
+        maxLinks:
+          type: integer
+          minimum: -1
+          example: 1000
+        maxClicks:
+          type: integer
+          minimum: -1
+          example: 100000
+        interval:
+          type: string
+          enum: [month, year]
+          example: month
+        isActive:
+          type: boolean
+          example: true
+        isDefault:
+          type: boolean
+          example: false
+        sortOrder:
+          type: integer
+          example: 2
+
+    PlanResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/Plan"
+
+    PlanListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Plan"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    # Subscription Schemas
+    Subscription:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        user:
+          oneOf:
+            - type: string
+              example: 507f1f77bcf86cd799439011
+            - $ref: "#/components/schemas/User"
+        plan:
+          oneOf:
+            - type: string
+              example: 507f1f77bcf86cd799439011
+            - $ref: "#/components/schemas/Plan"
+        status:
+          type: string
+          enum: [active, cancelled, expired, pending, past_due, free]
+          example: active
+        billingCycle:
+          type: string
+          enum: [monthly, yearly, lifetime]
+          example: monthly
+        currentPeriodStart:
+          type: string
+          format: date-time
+          example: "2024-01-15T00:00:00Z"
+        currentPeriodEnd:
+          type: string
+          format: date-time
+          example: "2024-02-15T00:00:00Z"
+        cancelAtPeriodEnd:
+          type: boolean
+          example: false
+        paymentProvider:
+          type: string
+          enum: [stripe, paypal, manual]
+          example: stripe
+        externalSubscriptionId:
+          type: string
+          nullable: true
+          example: sub_1234567890
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    CreateSubscriptionRequest:
+      type: object
+      properties:
+        planId:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        billingCycle:
+          type: string
+          enum: [monthly, yearly, lifetime]
+          example: monthly
+        paymentProvider:
+          type: string
+          enum: [stripe, paypal, manual]
+          example: stripe
+        externalSubscriptionId:
+          type: string
+          example: sub_1234567890
+      required:
+        - planId
+        - billingCycle
+
+    UpdateSubscriptionRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, cancelled, expired, pending, past_due]
+          example: active
+        currentPeriodEnd:
+          type: string
+          format: date-time
+          example: "2024-03-15T00:00:00Z"
+        cancelAtPeriodEnd:
+          type: boolean
+          example: true
+
+    SubscriptionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/Subscription"
+
+    SubscriptionListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subscription"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    SubscriptionHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subscription"
+
+    # Payment Schemas
+    Payment:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        user:
+          oneOf:
+            - type: string
+              example: 507f1f77bcf86cd799439011
+            - $ref: "#/components/schemas/User"
+        plan:
+          oneOf:
+            - type: string
+              example: 507f1f77bcf86cd799439011
+            - $ref: "#/components/schemas/Plan"
+        subscription:
+          oneOf:
+            - type: string
+              example: 507f1f77bcf86cd799439011
+            - $ref: "#/components/schemas/Subscription"
+        amount:
+          type: number
+          example: 29.99
+        currency:
+          type: string
+          example: usd
+        status:
+          type: string
+          enum: [pending, succeeded, failed, refunded, cancelled]
+          example: succeeded
+        paymentMethod:
+          type: string
+          enum: [card, bank_transfer]
+          example: card
+        stripePaymentIntentId:
+          type: string
+          example: pi_1234567890
+        stripeCustomerId:
+          type: string
+          example: cus_1234567890
+        stripePaymentMethodId:
+          type: string
+          example: pm_1234567890
+        billingCycle:
+          type: string
+          enum: [monthly, yearly, lifetime]
+          example: monthly
+        description:
+          type: string
+          example: Pro Plan - Monthly subscription
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        failureReason:
+          type: string
+          nullable: true
+          example: null
+        refundedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    SavedCard:
+      type: object
+      properties:
+        id:
+          type: string
+          example: pm_1234567890
+        brand:
+          type: string
+          example: visa
+        last4:
+          type: string
+          example: "4242"
+        expMonth:
+          type: integer
+          example: 12
+        expYear:
+          type: integer
+          example: 2025
+        isDefault:
+          type: boolean
+          example: true
+
+    CreateCheckoutRequest:
+      type: object
+      properties:
+        planId:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        billingCycle:
+          type: string
+          enum: [monthly, yearly, lifetime]
+          example: monthly
+        paymentMethodId:
+          type: string
+          example: pm_1234567890
+          description: Optional saved payment method ID
+      required:
+        - planId
+        - billingCycle
+
+    ConfirmPaymentRequest:
+      type: object
+      properties:
+        paymentIntentId:
+          type: string
+          example: pi_1234567890
+      required:
+        - paymentIntentId
+
+    ConfirmSessionRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          example: cs_1234567890
+      required:
+        - sessionId
+
+    AddCardRequest:
+      type: object
+      properties:
+        paymentMethodId:
+          type: string
+          example: pm_1234567890
+        setAsDefault:
+          type: boolean
+          example: true
+      required:
+        - paymentMethodId
+
+    CheckoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            checkoutUrl:
+              type: string
+              format: uri
+              example: https://checkout.stripe.com/pay/cs_...
+            sessionId:
+              type: string
+              example: cs_1234567890
+            amount:
+              type: number
+              example: 29.99
+            currency:
+              type: string
+              example: usd
+
+    PaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/Payment"
+
+    PaymentListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    SavedCardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/SavedCard"
+
+    SavedCardsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SavedCard"
