@@ -68,20 +68,20 @@ services:
     #   condition: service_healthy
     # redis:
     #   condition: service_healthy
-    networks:
-      - traefik-proxy
-    labels:
-      - "traefik.enable=true"
-      # HTTPS Router
-      - "traefik.http.routers.url-shortener-backend.rule=Host(`url.rejoyan.me`)"
-      - "traefik.http.routers.url-shortener-backend.entrypoints=websecure"
-      - "traefik.http.routers.url-shortener-backend.tls=true"
-      - "traefik.http.routers.url-shortener-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.url-shortener-backend.loadbalancer.server.port=5080"
-      # HTTP Router (redirect to HTTPS)
-      - "traefik.http.routers.url-shortener-backend-http.rule=Host(`url.rejoyan.me`)"
-      - "traefik.http.routers.url-shortener-backend-http.entrypoints=web"
-      - "traefik.http.routers.url-shortener-backend-http.middlewares=https-redirect"
+    # networks:
+    #   - traefik-proxy
+    # labels:
+    #   - "traefik.enable=true"
+    #   # HTTPS Router
+    #   - "traefik.http.routers.url-shortener-backend.rule=Host(`url.rejoyan.me`)"
+    #   - "traefik.http.routers.url-shortener-backend.entrypoints=websecure"
+    #   - "traefik.http.routers.url-shortener-backend.tls=true"
+    #   - "traefik.http.routers.url-shortener-backend.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.url-shortener-backend.loadbalancer.server.port=5080"
+    #   # HTTP Router (redirect to HTTPS)
+    #   - "traefik.http.routers.url-shortener-backend-http.rule=Host(`url.rejoyan.me`)"
+    #   - "traefik.http.routers.url-shortener-backend-http.entrypoints=web"
+    #   - "traefik.http.routers.url-shortener-backend-http.middlewares=https-redirect"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:5080/health"]
       interval: 30s
