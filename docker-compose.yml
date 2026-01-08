@@ -41,7 +41,8 @@ services:
     networks:
       - traefik-proxy
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_password}", "ping"]
+      test:
+        ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_password}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -74,13 +75,13 @@ services:
     labels:
       - "traefik.enable=true"
       # HTTPS Router
-      - "traefik.http.routers.url-shortener-backend.rule=Host(`api.domain.com`)"
+      - "traefik.http.routers.url-shortener-backend.rule=Host(`url.rejoyan.me`)"
       - "traefik.http.routers.url-shortener-backend.entrypoints=websecure"
       - "traefik.http.routers.url-shortener-backend.tls=true"
       - "traefik.http.routers.url-shortener-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.url-shortener-backend.loadbalancer.server.port=5080"
       # HTTP Router (redirect to HTTPS)
-      - "traefik.http.routers.url-shortener-backend-http.rule=Host(`api.domain.com`)"
+      - "traefik.http.routers.url-shortener-backend-http.rule=Host(`url.rejoyan.me`)"
       - "traefik.http.routers.url-shortener-backend-http.entrypoints=web"
       - "traefik.http.routers.url-shortener-backend-http.middlewares=https-redirect"
     healthcheck:
@@ -113,13 +114,13 @@ services:
     labels:
       - "traefik.enable=true"
       # HTTPS Router
-      - "traefik.http.routers.url-shortener-frontend.rule=Host(`domain.com`)"
+      - "traefik.http.routers.url-shortener-frontend.rule=Host(`url.rejoyan.me`)"
       - "traefik.http.routers.url-shortener-frontend.entrypoints=websecure"
       - "traefik.http.routers.url-shortener-frontend.tls=true"
       - "traefik.http.routers.url-shortener-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.url-shortener-frontend.loadbalancer.server.port=3000"
       # HTTP Router (redirect to HTTPS)
-      - "traefik.http.routers.url-shortener-frontend-http.rule=Host(`domain.com`)"
+      - "traefik.http.routers.url-shortener-frontend-http.rule=Host(`url.rejoyan.me`)"
       - "traefik.http.routers.url-shortener-frontend-http.entrypoints=web"
       - "traefik.http.routers.url-shortener-frontend-http.middlewares=https-redirect"
     healthcheck:
