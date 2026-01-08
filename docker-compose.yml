@@ -68,8 +68,8 @@ services:
     #   condition: service_healthy
     # redis:
     #   condition: service_healthy
-    # networks:
-    #   - traefik-proxy
+    networks:
+      - traefik-proxy
     # labels:
     #   - "traefik.enable=true"
     #   # HTTPS Router
