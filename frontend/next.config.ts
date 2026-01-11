@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 // Internal backend URL for server-side calls (Docker network)
 const INTERNAL_API_URL =
-  process.env.INTERNAL_API_URL || "http://localhost:5080";
+  process.env.INTERNAL_API_URL || "http://url-shortener-backend:5080";
 
 const nextConfig: NextConfig = {
   output: "standalone",
