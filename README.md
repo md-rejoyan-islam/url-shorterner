@@ -49,10 +49,10 @@ url-shortener/
 └── 📄 package.json
 ```
 
-| Application | Description | Documentation |
-|:------------|:------------|:--------------|
-| **Backend** | Express.js REST API with MongoDB & Redis | [📖 Backend README](./backend/README.md) |
-| **Frontend** | Next.js 16 React Application | [📖 Frontend README](./frontend/README.md) |
+| Application  | Description                              | Documentation                              |
+| :----------- | :--------------------------------------- | :----------------------------------------- |
+| **Backend**  | Express.js REST API with MongoDB & Redis | [📖 Backend README](./backend/README.md)   |
+| **Frontend** | Next.js 16 React Application             | [📖 Frontend README](./frontend/README.md) |
 
 ---
 
@@ -62,10 +62,10 @@ url-shortener/
 
 ### Test Credentials
 
-| Role | Email | Password |
-|:-----|:------|:---------|
-| Admin | `rejoyanislam22@gmail.com` | `aA123456` |
-| User | `rejoyanislam0014@gmail.com` | `aA123456` |
+| Role  | Email             | Password   |
+| :---- | :---------------- | :--------- |
+| Admin | `admin@gmail.com` | `aA123456` |
+| User  | `user@gmail.com`  | `aA123456` |
 
 > **Note:** These are demo accounts for testing purposes. Please do not change the passwords.
 
@@ -78,6 +78,7 @@ url-shortener/
 <td width="50%">
 
 ### 🔗 URL Management
+
 - Shorten long URLs instantly
 - Custom aliases for branded links
 - QR code generation
@@ -88,6 +89,7 @@ url-shortener/
 <td width="50%">
 
 ### 📊 Analytics
+
 - Real-time click tracking
 - Geographic location data
 - Device & browser analytics
@@ -100,6 +102,7 @@ url-shortener/
 <td width="50%">
 
 ### 👤 User Management
+
 - JWT authentication
 - Email verification
 - Password recovery
@@ -110,6 +113,7 @@ url-shortener/
 <td width="50%">
 
 ### 💳 Subscriptions
+
 - Multiple pricing tiers
 - Stripe payment integration
 - Card management
@@ -161,13 +165,13 @@ url-shortener/
 
 ### Prerequisites
 
-| Requirement | Version |
-|:------------|:--------|
-| Node.js | >= 18.0.0 |
-| pnpm | >= 8.0.0 |
-| MongoDB | >= 6.0 |
-| Redis | >= 6.0 |
-| Docker (optional) | >= 20.0 |
+| Requirement       | Version   |
+| :---------------- | :-------- |
+| Node.js           | >= 18.0.0 |
+| pnpm              | >= 8.0.0  |
+| MongoDB           | >= 6.0    |
+| Redis             | >= 6.0    |
+| Docker (optional) | >= 20.0   |
 
 ### Option 1: Local Development
 
@@ -217,11 +221,11 @@ pnpm dev:client    # Frontend only (port 3000)
 
 6️⃣ **Access the application**
 
-| Service | URL |
-|:--------|:----|
-| Frontend | http://localhost:3000 |
-| Backend API | http://localhost:5080 |
-| API Docs | http://localhost:5080/api-docs |
+| Service     | URL                            |
+| :---------- | :----------------------------- |
+| Frontend    | http://localhost:3000          |
+| Backend API | http://localhost:5080          |
+| API Docs    | http://localhost:5080/api-docs |
 
 ### Option 2: Docker Compose
 
@@ -243,6 +247,7 @@ docker-compose up -d
 ```
 
 This starts:
+
 - **MongoDB** (port 27017)
 - **Redis** (port 6379)
 - **Backend** (port 5080)
@@ -266,14 +271,14 @@ docker-compose down
 
 Run from the root directory:
 
-| Command | Description |
-|:--------|:------------|
-| `pnpm install` | Install all dependencies |
-| `pnpm dev` | Start both frontend & backend in development |
-| `pnpm dev:server` | Start only backend server |
-| `pnpm dev:client` | Start only frontend client |
-| `pnpm build` | Build both applications |
-| `pnpm start` | Start both in production mode |
+| Command           | Description                                  |
+| :---------------- | :------------------------------------------- |
+| `pnpm install`    | Install all dependencies                     |
+| `pnpm dev`        | Start both frontend & backend in development |
+| `pnpm dev:server` | Start only backend server                    |
+| `pnpm dev:client` | Start only frontend client                   |
+| `pnpm build`      | Build both applications                      |
+| `pnpm start`      | Start both in production mode                |
 
 ---
 
@@ -288,15 +293,15 @@ Full API documentation is available at `/api-docs` when the server is running.
 
 #### API Modules
 
-| Module | Endpoints | Description |
-|:-------|:---------:|:------------|
-| Auth | 17 | Authentication & user management |
-| URLs | 8 | URL shortening & management |
-| Analytics | 3 | Click tracking & statistics |
-| Plans | 8 | Subscription plans |
-| Subscriptions | 8 | User subscriptions |
-| Payments | 12 | Stripe integration |
-| Users | 5 | Admin user management |
+| Module        | Endpoints | Description                      |
+| :------------ | :-------: | :------------------------------- |
+| Auth          |    17     | Authentication & user management |
+| URLs          |     8     | URL shortening & management      |
+| Analytics     |     3     | Click tracking & statistics      |
+| Plans         |     8     | Subscription plans               |
+| Subscriptions |     8     | User subscriptions               |
+| Payments      |    12     | Stripe integration               |
+| Users         |     5     | Admin user management            |
 
 ### Frontend
 
@@ -304,14 +309,14 @@ Full API documentation is available at `/api-docs` when the server is running.
 
 #### Key Pages
 
-| Route | Description |
-|:------|:------------|
-| `/` | Landing page |
-| `/login` | User authentication |
-| `/dashboard` | User dashboard |
-| `/dashboard/urls` | URL management |
+| Route                  | Description         |
+| :--------------------- | :------------------ |
+| `/`                    | Landing page        |
+| `/login`               | User authentication |
+| `/dashboard`           | User dashboard      |
+| `/dashboard/urls`      | URL management      |
 | `/dashboard/analytics` | Analytics dashboard |
-| `/admin` | Admin panel |
+| `/admin`               | Admin panel         |
 
 ---
 
@@ -361,29 +366,29 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 
 ### Backend
 
-| Technology | Purpose |
-|:-----------|:--------|
-| Node.js 18+ | Runtime |
-| Express 5 | Web framework |
-| TypeScript | Type safety |
-| MongoDB | Database |
-| Redis | Caching |
-| Zod | Validation |
-| JWT | Authentication |
-| Stripe | Payments |
+| Technology  | Purpose        |
+| :---------- | :------------- |
+| Node.js 18+ | Runtime        |
+| Express 5   | Web framework  |
+| TypeScript  | Type safety    |
+| MongoDB     | Database       |
+| Redis       | Caching        |
+| Zod         | Validation     |
+| JWT         | Authentication |
+| Stripe      | Payments       |
 
 ### Frontend
 
-| Technology | Purpose |
-|:-----------|:--------|
-| Next.js 16 | React framework |
-| React 19 | UI library |
-| TypeScript | Type safety |
-| Tailwind CSS 4 | Styling |
-| Redux Toolkit | State management |
-| RTK Query | Data fetching |
-| Radix UI | UI components |
-| Recharts | Charts |
+| Technology     | Purpose          |
+| :------------- | :--------------- |
+| Next.js 16     | React framework  |
+| React 19       | UI library       |
+| TypeScript     | Type safety      |
+| Tailwind CSS 4 | Styling          |
+| Redux Toolkit  | State management |
+| RTK Query      | Data fetching    |
+| Radix UI       | UI components    |
+| Recharts       | Charts           |
 
 ---
 

@@ -129,7 +129,6 @@ export function PlanForm({ plan, onSuccess }: PlanFormProps) {
       interval: "month",
       maxLinks: 100,
       maxClicks: 10000,
-      maxDevices: 1,
       isActive: true,
       features: {
         customCodes: false,
@@ -156,7 +155,6 @@ export function PlanForm({ plan, onSuccess }: PlanFormProps) {
         interval: plan.interval,
         maxLinks: plan.maxLinks,
         maxClicks: plan.maxClicks,
-        maxDevices: plan.features?.maxDevices || 1,
         isActive: plan.isActive,
         features: plan.features || {
           customCodes: false,
@@ -299,7 +297,7 @@ export function PlanForm({ plan, onSuccess }: PlanFormProps) {
           )}
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <FormField
             control={form.control}
             name="price"
@@ -316,26 +314,6 @@ export function PlanForm({ plan, onSuccess }: PlanFormProps) {
                   />
                 </FormControl>
                 <FormDescription className="text-xs">&nbsp;</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="maxDevices"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Max Devices</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="-1 for unlimited"
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormDescription className="text-xs">-1 = unlimited</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
