@@ -4,6 +4,7 @@ import {
   closestCenter,
   DndContext,
   DragEndEvent,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -125,7 +126,11 @@ export function EditPlanContent({ planId }: EditPlanContentProps) {
   const plan = data?.data;
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Only activate after dragging 8px - allows clicks to register
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -632,18 +637,18 @@ export function EditPlanContent({ planId }: EditPlanContentProps) {
                   )}
                 />
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 relative z-10 pointer-events-auto">
                   <Button
                     type="submit"
                     disabled={isUpdating}
-                    className="bg-brand hover:bg-brand/90"
+                    className="bg-brand hover:bg-brand/90 pointer-events-auto"
                   >
                     {isUpdating && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
                     Update Plan
                   </Button>
-                  <Button type="button" variant="outline" asChild>
+                  <Button type="button" variant="outline" asChild className="pointer-events-auto">
                     <Link href="/admin/plans">Cancel</Link>
                   </Button>
                 </div>

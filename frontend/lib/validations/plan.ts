@@ -47,7 +47,6 @@ export const planSchema = z.object({
   interval: z.enum(["month", "year"]),
   maxLinks: z.number().min(-1),
   maxClicks: z.number().min(-1),
-  maxDevices: z.number().min(-1),
   isActive: z.boolean(),
   features: z.object({
     customCodes: z.boolean(),
