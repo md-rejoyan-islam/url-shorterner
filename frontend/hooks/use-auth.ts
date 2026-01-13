@@ -5,6 +5,7 @@ import { AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY } from "@/lib/constants";
 import { useLogoutMutation } from "@/store/api/auth-api";
 import { baseApi } from "@/store/api/base-api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { setUser } from "@/store/slices/auth-slice";
 import { useRouter } from "next/navigation";
 
 export function useAuth() {
@@ -13,7 +14,9 @@ export function useAuth() {
 
   // Get user from Redux state (set by AuthProvider)
   // This avoids unnecessary API calls on public pages
-  const { user, isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
+  const { user, isAuthenticated, isLoading } = useAppSelector(
+    (state) => state.auth
+  );
 
   const [logoutMutation] = useLogoutMutation();
 
@@ -22,6 +25,8 @@ export function useAuth() {
   const logout = async () => {
     try {
       await logoutMutation().unwrap();
+      // set user to null in auth slice will be handled by AuthProvider on next render
+      dispatch(setUser(null));
     } catch {
       // Continue with logout even if API fails
     } finally {

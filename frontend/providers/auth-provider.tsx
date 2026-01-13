@@ -6,20 +6,6 @@ import { setUser } from "@/store/slices/auth-slice";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-// Pages that don't require authentication
-const publicPaths = [
-  "/",
-  "/login",
-  "/register",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-  "/pricing",
-  "/features",
-  "/about",
-  "/contact",
-];
-
 // Auth pages - redirect to dashboard if already logged in
 const authPaths = [
   "/login",
@@ -28,6 +14,8 @@ const authPaths = [
   "/reset-password",
   "/verify-email",
 ];
+
+const protectedRouteStarters = ["/dashboard", "/admin"];
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -81,33 +69,26 @@ export function AuthProvider({ children, hasAuthCookies }: AuthProviderProps) {
     // Wait until auth check is complete
     if (!authChecked) return;
 
-    const isPublicPath =
-      publicPaths.some(
-        (path) => pathname === path || pathname.startsWith(path + "/")
-      ) || pathname.startsWith("/r/");
+    // Check if current path starts with any protected route
+    const isProtectedRoute = protectedRouteStarters.some((starter) =>
+      pathname.startsWith(starter)
+    );
 
+    // Check if current path is an auth path
     const isAuthPath = authPaths.some(
       (path) => pathname === path || pathname.startsWith(path + "/")
     );
 
-    const isAdminPath = pathname.startsWith("/admin");
-
     // Not logged in + trying to access protected route → go to login
-    if (!isAuthenticated && !isPublicPath) {
+    if (!isAuthenticated && isProtectedRoute) {
       router.replace("/login");
       return;
     }
 
-    // Logged in + on auth page → go to dashboard
+    // Logged in + on auth page → go to /dashboard if user, /admin if admin
     if (isAuthenticated && isAuthPath) {
       const redirectPath = user?.role === "admin" ? "/admin" : "/dashboard";
       router.replace(redirectPath);
-      return;
-    }
-
-    // Non-admin trying to access admin route → go to dashboard
-    if (isAuthenticated && isAdminPath && user?.role !== "admin") {
-      router.replace("/dashboard");
       return;
     }
   }, [isAuthenticated, authChecked, pathname, router, user]);

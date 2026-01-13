@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface UseCountUpOptions {
   start?: number;
@@ -22,12 +22,13 @@ export function useCountUp({
   enableScrollTrigger = true,
 }: UseCountUpOptions) {
   const [count, setCount] = useState(start);
-  const [hasStarted, setHasStarted] = useState(false);
+  // If scroll trigger is disabled, start immediately
+  const [hasStarted, setHasStarted] = useState(!enableScrollTrigger);
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    // If scroll trigger is disabled, animation starts immediately via initial state
     if (!enableScrollTrigger) {
-      setHasStarted(true);
       return;
     }
 

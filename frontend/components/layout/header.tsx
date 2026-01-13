@@ -74,7 +74,11 @@ export function Header() {
               <>
                 {isAuthenticated ? (
                   <div className="hidden md:flex items-center gap-4">
-                    <Button asChild variant="ghost">
+                    <Button
+                      asChild
+                      variant="ghost"
+                      className="bg-primary/10 hover:bg-primary/20"
+                    >
                       <Link href="/dashboard">Dashboard</Link>
                     </Button>
                     <UserMenu />

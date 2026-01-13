@@ -1,20 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import {
-  LogOut,
-  Settings,
-  User,
-  Users,
-  CreditCard,
-  Shield,
-  Receipt,
-  Lock,
-  Link2,
-  Layers,
-  FileText,
-  LayoutDashboard,
-} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,31 +11,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-
-// Mock user for development testing
-const DEV_BYPASS_AUTH = true;
-const mockUser = {
-  firstName: "Test",
-  lastName: "User",
-  fullName: "Test User",
-  email: "test@example.com",
-  avatar: null,
-  role: "user",
-};
+import {
+  CreditCard,
+  FileText,
+  Layers,
+  LayoutDashboard,
+  Link2,
+  Lock,
+  LogOut,
+  Receipt,
+  Settings,
+  User,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
 
 export function UserMenu() {
-  const { user: authUser, isAdmin: authIsAdmin, logout } = useAuth();
-
-  // Use mock user if dev bypass is enabled and no real user
-  const user = authUser || (DEV_BYPASS_AUTH ? mockUser : null);
-  const isAdmin = authIsAdmin || (DEV_BYPASS_AUTH && mockUser.role === "admin");
+  const { user, isAdmin, logout } = useAuth();
 
   if (!user) return null;
 
-  const initials = `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase();
+  const initials = `${user.firstName?.[0] || ""}${
+    user.lastName?.[0] || ""
+  }`.toUpperCase();
 
   return (
     <DropdownMenu modal={false}>
@@ -62,7 +48,12 @@ export function UserMenu() {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" sideOffset={8} forceMount>
+      <DropdownMenuContent
+        className="w-56"
+        align="end"
+        sideOffset={8}
+        forceMount
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 border-2 border-brand/20">
@@ -72,7 +63,9 @@ export function UserMenu() {
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{user.fullName}</p>
+              <p className="text-sm font-medium leading-none">
+                {user.fullName}
+              </p>
               <p className="text-xs leading-none text-muted-foreground">
                 {user.email}
               </p>
@@ -164,7 +157,10 @@ export function UserMenu() {
           )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600">
+        <DropdownMenuItem
+          onClick={logout}
+          className="cursor-pointer text-red-600"
+        >
           <LogOut className="mr-2 h-4 w-4" />
           Log out
         </DropdownMenuItem>
