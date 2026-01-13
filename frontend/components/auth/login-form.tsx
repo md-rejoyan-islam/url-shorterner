@@ -70,12 +70,16 @@ export function LoginForm() {
 
         toast.success("Login Successful", { description: "Welcome back!" });
 
+        console.log("user", user);
+
         // Redirect based on user role
         const isAdmin = user?.role === "admin";
+        console.log(isAdmin);
+
         const redirectPath = isAdmin ? "/admin" : "/dashboard";
 
         // Use replace to prevent back navigation to login page
-        router.replace(redirectPath);
+        router.push(redirectPath);
       }
     } catch (error: unknown) {
       toast.error("Login Failed", {
